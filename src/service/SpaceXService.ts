@@ -75,6 +75,26 @@ class SpaceXService {
     }
   }
 
+  async fetchUpcomingLaunches(): Promise<Result<Launch[]>> {
+    try {
+      const response = await this.networkService.post<object, QueryResponse>(
+        this.baseURL + 'launches/query',
+        {
+          query: { upcoming: true },
+          options: {
+            populate: ['crew.crew'],
+            sort: { date_unix: 1 },
+            pagination: false,
+          },
+        }
+      );
+      return { success: true, data: response.docs };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return { success: false, error: { message } };
+    }
+  }
+
   async fetchLaunches(): Promise<Result<Launch[]>> {
     try {
       const response = await this.networkService.post<object, QueryResponse>(
@@ -84,6 +104,7 @@ class SpaceXService {
           options: {
             populate: ['crew.crew'],
             sort: { date_unix: -1 },
+            pagination: false,
           },
         }
       );

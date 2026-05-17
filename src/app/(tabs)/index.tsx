@@ -6,9 +6,30 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import SpaceXService, { Launch } from '@/service/SpaceXService';
 
 const service = new SpaceXService();
+
+type Tab = 'launched' | 'upcoming';
+
+function SegmentedControl({ selected, onChange }: { selected: Tab; onChange: (tab: Tab) => void }) {
+  const theme = useTheme();
+  return (
+    <ThemedView type="backgroundElement" style={styles.segmented}>
+      {(['launched', 'upcoming'] as Tab[]).map((tab) => (
+        <Pressable key={tab} style={styles.segmentedItem} onPress={() => onChange(tab)}>
+          <ThemedView
+            style={[styles.segment, selected === tab && { backgroundColor: theme.backgroundSelected }]}>
+            <ThemedText type="small" themeColor={selected === tab ? 'text' : 'textSecondary'}>
+              {tab === 'launched' ? 'Launched' : 'Upcoming'}
+            </ThemedText>
+          </ThemedView>
+        </Pressable>
+      ))}
+    </ThemedView>
+  );
+}
 
 function LaunchCard({ launch, onPress }: { launch: Launch; onPress: () => void }) {
   const reused = launch.cores.some(c => c.reused);
@@ -18,9 +39,11 @@ function LaunchCard({ launch, onPress }: { launch: Launch; onPress: () => void }
       <ThemedView type="backgroundElement" style={styles.card}>
         <ThemedView type="backgroundElement" style={styles.cardHeader}>
           <ThemedText type="small" themeColor="textSecondary">#{launch.flight_number}</ThemedText>
-          <ThemedText type="small" style={styles.successLabel}>
-            {launch.success ? '✓ Success' : '✗ Failed'}
-          </ThemedText>
+          {launch.success !== null && (
+            <ThemedText type="small" style={styles.successLabel}>
+              {launch.success ? '✓ Success' : '✗ Failed'}
+            </ThemedText>
+          )}
         </ThemedView>
 
         <ThemedText type="small" style={styles.name}>{launch.name}</ThemedText>
@@ -45,34 +68,37 @@ function LaunchCard({ launch, onPress }: { launch: Launch; onPress: () => void }
 
 export default function LaunchesScreen() {
   const router = useRouter();
-  const [launches, setLaunches] = useState<Launch[]>([]);
+  const [selectedTab, setSelectedTab] = useState<Tab>('launched');
+  const [launched, setLaunched] = useState<Launch[]>([]);
+  const [upcoming, setUpcoming] = useState<Launch[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    service.fetchLaunches().then((result) => {
-      if (result.success) {
-        setLaunches(result.data);
-      } else {
-        setError(result.error.message);
+    Promise.all([service.fetchLaunches(), service.fetchUpcomingLaunches()]).then(
+      ([launchedResult, upcomingResult]) => {
+        if (launchedResult.success) setLaunched(launchedResult.data);
+        if (upcomingResult.success) setUpcoming(upcomingResult.data);
+        if (!launchedResult.success) setError(launchedResult.error.message);
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    );
   }, []);
+
+  const data = selectedTab === 'launched' ? launched : upcoming;
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <ThemedText type="subtitle" style={styles.title}>Launches</ThemedText>
 
-        {loading && <ActivityIndicator style={styles.loader} />}
+        <SegmentedControl selected={selectedTab} onChange={setSelectedTab} />
 
-        {error && (
-          <ThemedText themeColor="textSecondary">{error}</ThemedText>
-        )}
+        {loading && <ActivityIndicator style={styles.loader} />}
+        {error && <ThemedText themeColor="textSecondary">{error}</ThemedText>}
 
         <FlatList
-          data={launches}
+          data={data}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <LaunchCard
@@ -92,6 +118,18 @@ const styles = StyleSheet.create({
   safeArea: { flex: 1, paddingHorizontal: Spacing.four, paddingTop: Spacing.four },
   title: { marginBottom: Spacing.three },
   loader: { marginTop: Spacing.four },
+  segmented: {
+    flexDirection: 'row',
+    borderRadius: Spacing.two,
+    padding: Spacing.half,
+    marginBottom: Spacing.three,
+  },
+  segmentedItem: { flex: 1 },
+  segment: {
+    paddingVertical: Spacing.one,
+    borderRadius: Spacing.one,
+    alignItems: 'center',
+  },
   list: { gap: Spacing.two, paddingBottom: Spacing.six },
   card: {
     padding: Spacing.three,
