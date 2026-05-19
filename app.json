@@ -8,7 +8,7 @@
     "scheme": "spacexproject",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
+      "icon": "./assets/images/icon.png",
       "bundleIdentifier": "com.anonymous.SpaceXProject"
     },
     "android": {
