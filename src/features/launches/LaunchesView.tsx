@@ -6,9 +6,9 @@ import { Observer } from "mobx-react-lite";
 import { useEffect } from "react";
 import { ActivityIndicator, FlatList, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import LaunchCard from "../../components/LaunchCard";
+import SegmentedControl from "../../components/SegmentedControl";
 import LaunchesModel from "./LaunchesModel";
-import LaunchCard from "./components/LaunchCard";
-import SegmentedControl from "./components/SegmentedControl";
 
 interface Props {
   model: LaunchesModel;
