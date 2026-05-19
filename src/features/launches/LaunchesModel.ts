@@ -1,6 +1,8 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 
-import SpaceXService, { Launch } from '@/service/SpaceXService';
+import { Launch } from '@/models/Launch';
+import SpaceXService from '@/service/SpaceXService';
+import { networkErrorDescription } from '@/service/NetworkService';
 
 export type Tab = 'launched' | 'upcoming';
 
@@ -34,7 +36,7 @@ class LaunchesModel {
     runInAction(() => {
       if (launchedResult.success) this.launched = launchedResult.data;
       if (upcomingResult.success) this.upcoming = upcomingResult.data;
-      if (!launchedResult.success) this.error = launchedResult.error.message;
+      if (!launchedResult.success) this.error = networkErrorDescription(launchedResult.error);
       this.loading = false;
     });
   }

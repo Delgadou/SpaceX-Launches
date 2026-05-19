@@ -1,53 +1,19 @@
-import NetworkService from './NetworkService';
+import { Launch } from '@/models/Launch';
+import NetworkService, { isNetworkError, NetworkError } from './NetworkService';
 
-export interface CrewMember {
-  id: string;
-  name: string;
-  agency: string;
-  image: string;
-}
-
-export interface LaunchCrew {
-  crew: CrewMember;
-  role: string;
-}
-
-export interface LaunchCore {
-  core: string;
-  reused: boolean;
-}
-
-export interface Launch {
-  id: string;
-  name: string;
-  flight_number: number;
-  date_utc: string;
-  date_unix: number;
-  upcoming: boolean;
-  success: boolean | null;
-  details: string | null;
-  rocket: string;
-  launchpad: string;
-  crew: LaunchCrew[];
-  cores: LaunchCore[];
-  links: {
-    patch: { small: string | null; large: string | null };
-    webcast: string | null;
-    article: string | null;
-    wikipedia: string | null;
-  };
-}
+export type Result<T> =
+  | { success: true; data: T }
+  | { success: false; error: NetworkError };
 
 interface QueryResponse {
   docs: Launch[];
   totalDocs: number;
 }
 
-export type NetworkError = { message: string };
-
-export type Result<T> =
-  | { success: true; data: T }
-  | { success: false; error: NetworkError };
+function toNetworkError(error: unknown): NetworkError {
+  if (isNetworkError(error)) return error;
+  return { kind: 'unknown', error: error instanceof Error ? error : new Error(String(error)) };
+}
 
 class SpaceXService {
   private readonly baseURL = 'https://api.spacexdata.com/v5/';
@@ -67,11 +33,10 @@ class SpaceXService {
         }
       );
       const launch = response.docs[0];
-      if (!launch) throw new Error('Launch not found');
+      if (!launch) return { success: false, error: { kind: 'noData' } };
       return { success: true, data: launch };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return { success: false, error: { message } };
+      return { success: false, error: toNetworkError(error) };
     }
   }
 
@@ -90,8 +55,7 @@ class SpaceXService {
       );
       return { success: true, data: response.docs };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return { success: false, error: { message } };
+      return { success: false, error: toNetworkError(error) };
     }
   }
 
@@ -110,8 +74,7 @@ class SpaceXService {
       );
       return { success: true, data: response.docs };
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      return { success: false, error: { message } };
+      return { success: false, error: toNetworkError(error) };
     }
   }
 }
